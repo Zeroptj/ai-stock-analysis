@@ -1,0 +1,28 @@
+# =============================================
+# Screening Criteria — Weekly Movers
+# =============================================
+# Pipeline: fetch US-listed universe → batch yfinance price history
+# → compute weekly % change → return top N gainers + top N losers.
+
+# --- Universe ---
+universe:
+  exchanges: ["NASDAQ", "NYSE", "AMEX"]
+  # Hard cap to keep runtime manageable; 0 = no cap (use full US universe)
+  max_tickers: 0
+
+# --- Movers selection ---
+movers:
+  lookback_days: 5             # trading days — approx 1 week
+  top_gainers: 3
+  top_losers: 3
+
+# --- Pre-filters (applied on price history) ---
+filters:
+  min_price: 5.0               # skip penny stocks
+  min_avg_dollar_volume: 5_000_000   # liquidity floor: avg daily $ volume
+  min_history_days: 5          # need enough bars to compute return
+
+# --- Batch download ---
+batch:
+  chunk_size: 400              # yfinance multi-ticker download chunk
+  threads: true                # yfinance threaded downloads

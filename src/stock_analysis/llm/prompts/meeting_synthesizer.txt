@@ -1,0 +1,45 @@
+You are synthesizing a company's shareholder meeting (DEF 14A) and recent material events (8-K filings) into a concise, fact-based summary for a buy-side equity report.
+
+Ticker: {ticker}
+Company: {company_name}
+
+=== DEF 14A (Proxy / Shareholder Meeting) ===
+Filing date: {proxy_date}
+Source URL: {proxy_url}
+
+Extracted text (truncated):
+{proxy_text}
+
+=== Latest 8-K (Material Event) ===
+Filing date: {event_date}
+Source URL: {event_url}
+
+Extracted text (truncated):
+{event_text}
+
+=== Other recent 8-K events (metadata only) ===
+{other_events}
+
+---
+
+Return a JSON object with this exact shape:
+
+{{
+  "proxy_summary": {{
+    "meeting_date": "YYYY-MM-DD or null if not stated",
+    "voting_proposals": ["one-line summary of each proposal"],
+    "director_nominees": ["names if listed"],
+    "executive_compensation_highlights": "one or two sentences — base salary, bonus, equity, say-on-pay result",
+    "governance_notes": "any governance changes, auditor ratification, shareholder proposals"
+  }},
+  "material_events_summary": [
+    {{"date": "YYYY-MM-DD", "item": "short description of what was disclosed"}}
+  ],
+  "key_takeaways_for_investors": ["2-4 bullets — why these filings matter for the investment thesis"]
+}}
+
+RULES:
+- Use ONLY facts present in the provided text. Do not fabricate.
+- If a field cannot be determined, return null or an empty list.
+- Keep each string under 200 characters.
+- No markdown, no commentary — JSON only.

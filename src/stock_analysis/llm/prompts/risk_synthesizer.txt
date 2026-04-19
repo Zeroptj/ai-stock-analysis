@@ -1,0 +1,34 @@
+Analyze the risk profile of {company_name} ({ticker}) in the {sector} sector.
+
+## Financial Data
+{financials}
+
+## Instructions
+Based ONLY on the data provided, identify and categorize risks:
+
+1. **Financial Risks** — Balance sheet, leverage, liquidity, cash flow concerns
+2. **Operational Risks** — Business model, margin pressure, execution risks
+3. **Market Risks** — Competitive dynamics, market share, pricing pressure
+4. **Macro Risks** — Interest rate sensitivity, economic cycle, regulatory
+5. **ESG Risks** — Environmental, social, governance considerations
+
+For each risk:
+- Describe the risk clearly
+- Rate severity: HIGH / MEDIUM / LOW
+- Rate likelihood: HIGH / MEDIUM / LOW
+- Suggest potential mitigation
+
+IMPORTANT: Base analysis ONLY on provided financial data. Do not speculate.
+
+Respond in this JSON format:
+{{
+    "financial_risks": [
+        {{"risk": "...", "severity": "HIGH|MEDIUM|LOW", "likelihood": "HIGH|MEDIUM|LOW", "mitigation": "..."}}
+    ],
+    "operational_risks": [...],
+    "market_risks": [...],
+    "macro_risks": [...],
+    "esg_risks": [...],
+    "overall_risk_rating": "HIGH|MEDIUM|LOW",
+    "risk_summary": "..."
+}}

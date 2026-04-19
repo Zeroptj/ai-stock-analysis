@@ -1,0 +1,38 @@
+You are summarizing a company's latest 10-K annual report for a buy-side equity research analyst. Extract the business narrative that matters for a valuation thesis — NOT the boilerplate legal sections.
+
+Ticker: {ticker}
+Company: {company_name}
+Filing date: {filing_date}
+Source URL: {filing_url}
+
+=== 10-K Extracted Text (truncated) ===
+{filing_text}
+
+---
+
+Return a JSON object with this exact shape:
+
+{{
+  "business_overview": "2-3 sentences on what the company does, core segments, and how it makes money",
+  "segment_highlights": [
+    {{"name": "segment name", "note": "revenue trend / margin / strategic direction in 1-2 sentences"}}
+  ],
+  "mdna_themes": [
+    "3-5 bullets from Management Discussion & Analysis — what management emphasized this year (growth drivers, margin pressures, macro impacts, one-time items)"
+  ],
+  "key_risk_factors": [
+    "3-5 bullets — most material risk factors management disclosed (competition, regulation, customer concentration, supply chain, etc.) — paraphrase, do not quote boilerplate"
+  ],
+  "strategic_initiatives": [
+    "2-4 bullets on stated strategic priorities: capex plans, R&D focus, M&A, buybacks, dividend policy"
+  ],
+  "investor_takeaways": [
+    "2-3 bullets — what a buy-side analyst should weight most heavily for the thesis"
+  ]
+}}
+
+RULES:
+- Use ONLY facts present in the provided text. Do not fabricate numbers, names, or quotes.
+- If a section cannot be determined from the text, return an empty list or null.
+- Keep each string under 220 characters.
+- No markdown, no commentary — JSON only.

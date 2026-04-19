@@ -1,0 +1,411 @@
+/* =============================================================
+   AI Equity Research — Finance-grade report stylesheet
+   Target: A4 print via Playwright Chromium
+   ============================================================= */
+
+/* ---------- Reset ---------- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { background: #fff; }
+
+/* ---------- Typography ----------
+   Unified sans-serif stack (buy-side research standard). Using Segoe UI first
+   since Chromium on Windows renders it crisply; Helvetica / Arial are reliable
+   cross-platform fallbacks. Tabular numerals applied globally so columns of
+   numbers align regardless of digit width.
+*/
+body {
+    font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.45;
+    color: #111827;
+    font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+    font-variant-numeric: tabular-nums lining-nums;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* All numeric-heavy elements explicitly request tabular figures */
+table, .value, .card-value, .big-number .value,
+.kv-table td, .fin-table td, .fin-table th, .data-table td, .data-table th {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+p { margin: 6px 0; }
+ul { margin: 6px 0 6px 18px; }
+li { margin-bottom: 3px; }
+em { color: #374151; }
+
+.muted, .text-muted { color: #6B7280; font-size: 9.5pt; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+
+/* ---------- Page ---------- */
+.page {
+    width: 210mm;
+    min-height: 262mm;           /* account for page header/footer */
+    padding: 6mm 4mm 8mm 4mm;
+    page-break-after: always;
+    position: relative;
+}
+.page:last-of-type { page-break-after: auto; }
+
+@page { size: A4; margin: 14mm 12mm; }
+
+/* ---------- Section headers ---------- */
+.section-title {
+    font-size: 17pt;
+    font-weight: 600;
+    color: #0B3D91;
+    border-bottom: 2px solid #0B3D91;
+    padding-bottom: 6px;
+    margin-bottom: 14px;
+    letter-spacing: -0.2px;
+}
+h3 {
+    font-size: 11.5pt;
+    font-weight: 600;
+    color: #111827;
+    margin: 14px 0 6px 0;
+    letter-spacing: -0.1px;
+}
+h4 {
+    font-size: 9.5pt;
+    font-weight: 600;
+    color: #4B5563;
+    margin: 10px 0 4px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ---------- Cover ---------- */
+.cover-band {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #D1D5DB;
+    padding-bottom: 4px;
+    margin-bottom: 14px;
+    font-size: 9pt;
+}
+.firm-mark {
+    font-weight: 700;
+    color: #0B3D91;
+    letter-spacing: 2.5px;
+    font-size: 9pt;
+}
+.report-date { color: #6B7280; }
+
+.cover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 6px 0 12px 0;
+    border-bottom: 3px solid #0B3D91;
+    margin-bottom: 18px;
+}
+.cover-title h1 {
+    font-size: 26pt;
+    font-weight: 600;
+    color: #0F172A;
+    line-height: 1.15;
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
+}
+.cover-title .subtitle {
+    font-size: 10pt;
+    color: #374151;
+}
+.ticker-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #0B3D91;
+    color: #fff;
+    font-weight: 700;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    margin-right: 6px;
+}
+.sep { margin: 0 6px; color: #9CA3AF; }
+
+.rating-block {
+    min-width: 140px;
+    text-align: center;
+    padding: 8px 14px;
+    border-radius: 4px;
+    border: 2px solid #374151;
+    background: #F9FAFB;
+}
+.rating-label {
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #6B7280;
+}
+.rating-value {
+    font-size: 18pt;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    margin: 2px 0;
+}
+.rating-sub { font-size: 9pt; color: #4B5563; }
+
+.rating-buy       { background: #E8F5E9; border-color: #2E7D32; }
+.rating-buy  .rating-value { color: #2E7D32; }
+.rating-sell      { background: #FFEBEE; border-color: #B71C1C; }
+.rating-sell .rating-value { color: #B71C1C; }
+.rating-hold      { background: #FFF8E1; border-color: #B28704; }
+.rating-hold .rating-value { color: #B28704; }
+
+/* ---------- Screening banner ---------- */
+.screening-banner {
+    padding: 8px 12px;
+    border-radius: 3px;
+    margin-bottom: 14px;
+    font-size: 10pt;
+    border-left: 4px solid;
+}
+.screening-banner.gainer { background: #E8F5E9; border-color: #2E7D32; color: #1B5E20; }
+.screening-banner.loser  { background: #FFEBEE; border-color: #B71C1C; color: #7F0000; }
+
+.earnings-banner {
+    padding: 8px 12px;
+    border-radius: 3px;
+    margin-bottom: 14px;
+    font-size: 10pt;
+    border-left: 4px solid #1D4ED8;
+    background: #EFF6FF;
+    color: #1E3A8A;
+}
+.earnings-banner .est { color: #334155; margin-left: 10px; }
+
+/* ---------- Summary grid ---------- */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 0 0 14px 0;
+}
+.summary-card {
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    border-radius: 4px;
+    padding: 10px 12px;
+    text-align: center;
+}
+.summary-card .label, .summary-card .card-label {
+    font-size: 8pt;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+.summary-card .value, .summary-card .card-value {
+    font-size: 16pt;
+    font-weight: 600;
+    color: #0F172A;
+    letter-spacing: -0.3px;
+}
+.summary-card .sub, .summary-card .card-sub {
+    font-size: 8.5pt;
+    color: #6B7280;
+    margin-top: 2px;
+}
+.summary-card.up   .value { color: #2E7D32; }
+.summary-card.down .value { color: #B71C1C; }
+
+/* ---------- One-liner ---------- */
+.one-liner {
+    background: #F3F4F6;
+    border-left: 4px solid #0B3D91;
+    padding: 10px 14px;
+    margin: 10px 0 14px 0;
+    font-size: 10.5pt;
+    color: #1F2937;
+}
+
+/* ---------- KV table (key-value pair table) ---------- */
+.kv-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 10pt;
+}
+.kv-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #E5E7EB;
+    vertical-align: top;
+}
+.kv-table td:nth-child(odd) {
+    color: #6B7280;
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    width: 24%;
+}
+.kv-table td:nth-child(even) {
+    font-weight: 600;
+    color: #111827;
+    width: 26%;
+}
+
+/* ---------- Thesis blocks ---------- */
+.thesis-block {
+    padding: 10px 14px;
+    border-left: 4px solid;
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 10px;
+    background: #F9FAFB;
+}
+.thesis-block h3 { margin-top: 0; font-size: 11pt; }
+.thesis-block.bull  { background: #ECFDF5; border-color: #059669; }
+.thesis-block.bull  h3 { color: #065F46; }
+.thesis-block.base  { background: #EFF6FF; border-color: #1D4ED8; }
+.thesis-block.base  h3 { color: #1E3A8A; }
+.thesis-block.bear  { background: #FEF2F2; border-color: #B91C1C; }
+.thesis-block.bear  h3 { color: #7F1D1D; }
+.thesis-block.catalysts { background: #FFFBEB; border-color: #B45309; }
+.thesis-block.catalysts h3 { color: #78350F; }
+
+/* ---------- Financial tables ---------- */
+.fin-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 12px 0;
+    font-size: 9.5pt;
+}
+.fin-table thead th {
+    background: #0B3D91;
+    color: #fff;
+    font-weight: 600;
+    padding: 7px 8px;
+    text-align: right;
+    font-size: 9pt;
+    letter-spacing: 0.2px;
+}
+.fin-table thead th:first-child { text-align: left; }
+.fin-table tbody td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #E5E7EB;
+    text-align: right;
+    color: #111827;
+}
+.fin-table tbody td:first-child { text-align: left; color: #374151; font-weight: 500; }
+.fin-table tbody tr:nth-child(even) { background: #F9FAFB; }
+
+/* ---------- Data table (compact) ---------- */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0 12px 0;
+    font-size: 9.5pt;
+}
+.data-table th {
+    background: #F3F4F6;
+    padding: 5px 7px;
+    border-bottom: 2px solid #9CA3AF;
+    text-align: right;
+    font-weight: 600;
+    font-size: 9pt;
+    color: #374151;
+}
+.data-table td {
+    padding: 5px 7px;
+    text-align: right;
+    border-bottom: 1px solid #E5E7EB;
+}
+.data-table td:first-child, .data-table th:first-child { text-align: left; color: #6B7280; }
+
+/* ---------- Big number (valuation headline) ---------- */
+.val-summary { margin: 8px 0 16px 0; }
+.big-number {
+    display: inline-block;
+    padding: 14px 22px;
+    background: linear-gradient(135deg, #0B3D91 0%, #1D4ED8 100%);
+    color: #fff;
+    border-radius: 5px;
+    min-width: 240px;
+    text-align: center;
+}
+.big-number .label {
+    font-size: 9pt;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    opacity: 0.85;
+}
+.big-number .value {
+    font-size: 28pt;
+    font-weight: 600;
+    line-height: 1.1;
+    margin: 4px 0;
+    letter-spacing: -0.8px;
+}
+.big-number .sub { font-size: 10pt; font-weight: 500; }
+.big-number .sub.up   { color: #A7F3D0; }
+.big-number .sub.down { color: #FECACA; }
+
+/* ---------- Charts ---------- */
+.chart {
+    margin: 12px 0;
+    text-align: center;
+}
+.chart img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #E5E7EB;
+    border-radius: 3px;
+}
+.chart-caption {
+    font-size: 8.5pt;
+    color: #4B5563;
+    background: #F9FAFB;
+    border-left: 3px solid #9CA3AF;
+    padding: 6px 10px;
+    margin: -4px 0 14px 0;
+    line-height: 1.45;
+}
+.chart-caption strong { color: #111827; }
+
+/* ---------- Risk severity ---------- */
+.sev-high   { color: #B71C1C; font-weight: 700; }
+.sev-medium { color: #B28704; font-weight: 700; }
+.sev-low    { color: #2E7D32; font-weight: 700; }
+
+/* ---------- QC block ---------- */
+.qc-block {
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin: 8px 0 12px 0;
+    font-size: 10pt;
+    border-left: 4px solid;
+}
+.qc-pass { background: #ECFDF5; border-color: #059669; color: #065F46; }
+.qc-fail { background: #FFFBEB; border-color: #B45309; color: #78350F; }
+
+/* ---------- Disclaimer ---------- */
+.disclaimer {
+    margin-top: 18px;
+    padding: 10px 14px;
+    background: #F3F4F6;
+    border-top: 1px solid #D1D5DB;
+    font-size: 8.5pt;
+    color: #4B5563;
+    line-height: 1.55;
+    font-style: italic;
+}
+.disclaimer strong { font-style: normal; color: #111827; }
+
+/* ---------- Appendix-specific ---------- */
+.appendix .fin-table { font-size: 9pt; }
+.appendix .fin-table tbody td { padding: 4px 8px; }
+
+/* ---------- Print-specific hints ---------- */
+@media print {
+    body { font-size: 10pt; }
+    .page { padding: 4mm 2mm 6mm 2mm; }
+    table, figure, .thesis-block, .qc-block, .chart { page-break-inside: avoid; }
+    h2, h3, h4 { page-break-after: avoid; }
+}

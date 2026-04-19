@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ ticker }} — Equity Research</title>
+    <style>{% include 'report.css' %}</style>
+</head>
+<body>
+
+<!-- =============== PAGE 1 : COVER & EXEC SUMMARY =============== -->
+<section class="page cover">
+    <div class="cover-band">
+        <div class="firm-mark">AI EQUITY RESEARCH</div>
+        <div class="report-date">{{ report_date }}</div>
+    </div>
+
+    <header class="cover-header">
+        <div class="cover-title">
+            <h1>{{ company_name }}</h1>
+            <div class="subtitle">
+                <span class="ticker-chip">{{ ticker }}</span>
+                <span class="sep">•</span>
+                <span>{{ sector or 'Sector n/a' }}</span>
+                {% if sub_industry %}<span class="sep">•</span><span>{{ sub_industry }}</span>{% endif %}
+            </div>
+        </div>
+        <div class="rating-block rating-{{ (thesis.rating or 'HOLD') | lower }}">
+            <div class="rating-label">Rating</div>
+            <div class="rating-value">{{ thesis.rating or 'HOLD' }}</div>
+            <div class="rating-sub">{{ thesis.conviction or 'Medium' }} conviction</div>
+        </div>
+    </header>
+
+    {% if screening.mover_type %}
+    <div class="screening-banner {{ screening.mover_type }}">
+        Selected as a weekly <strong>{{ screening.mover_type }}</strong>
+        {% if screening.pct_change is not none %}
+          — <strong>{{ '%+.2f' | format(screening.pct_change) }}%</strong>
+          from {{ '$%.2f' | format(screening.price_start or 0) }}
+          to {{ '$%.2f' | format(current_price) }}
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% set _edate = earnings_calendar.get('Earnings Date') if earnings_calendar else None %}
+    {% if _edate %}
+    <div class="earnings-banner">
+        <strong>Next Earnings:</strong>
+        {{ (_edate[0] if _edate is iterable and _edate is not string else _edate) | fmt_date }}
+        {% if earnings_calendar.get('Earnings Average') %}
+        <span class="est">EPS est. {{ earnings_calendar['Earnings Average'] | round(2) }}</span>
+        {% endif %}
+        {% if earnings_calendar.get('Revenue Average') %}
+        <span class="est">Rev est. {{ earnings_calendar['Revenue Average'] | fmt_bn }}</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="label">Current Price</div>
+            <div class="value">{{ current_price | fmt_currency }}</div>
+        </div>
+        <div class="summary-card">
+            <div class="label">Fair Value</div>
+            <div class="value">{{ fair_value | fmt_currency }}</div>
+            <div class="sub">{{ model_description }}</div>
+        </div>
+        <div class="summary-card {{ 'up' if (upside_pct or 0) > 0 else 'down' }}">
+            <div class="label">Upside / Downside</div>
+            <div class="value">{{ upside_pct | fmt_pct }}</div>
+        </div>
+        <div class="summary-card">
+            <div class="label">Market Cap</div>
+            <div class="value">{{ market_cap | fmt_bn }}</div>
+        </div>
+    </div>
+
+    {% if thesis.one_line_summary %}
+    <div class="one-liner"><strong>Summary — </strong>{{ thesis.one_line_summary }}</div>
+    {% endif %}
+
+    <table class="kv-table">
+        <tr>
+            <td>WACC / Cost of Equity</td>
+            <td>{% if wacc %}{{ (wacc*100) | round(2) }}%{% elif cost_of_equity %}{{ (cost_of_equity*100) | round(2) }}%{% else %}n/a{% endif %}</td>
+            <td>EV / EBITDA</td>
+            <td>{% if ev_ebitda %}{{ ev_ebitda | round(1) }}x{% else %}n/a{% endif %}</td>
+        </tr>
+        <tr>
+            <td>Enterprise Value</td>
+            <td>{{ enterprise_value | fmt_bn }}</td>
+            <td>P / E</td>
+            <td>{% if pe_ratio %}{{ pe_ratio | round(1) }}x{% else %}n/a{% endif %}</td>
+        </tr>
+        <tr>
+            <td>Valuation Model</td>
+            <td>{{ model_used | upper }}</td>
+            <td>P / S</td>
+            <td>{% if ps_ratio %}{{ ps_ratio | round(1) }}x{% else %}n/a{% endif %}</td>
+        </tr>
+    </table>
+</section>
+
+<!-- =============== PAGE 2 : INVESTMENT THESIS =============== -->
+<section class="page">
+    <h2 class="section-title">Investment Thesis</h2>
+
+    <div class="thesis-block bull">
+        <h3>Bull Case</h3>
+        <p>{{ (thesis.bull_case.thesis if thesis.bull_case else '—') | humanize_nums }}</p>
+        {% if thesis.bull_case and thesis.bull_case.key_drivers %}
+        <ul>{% for d in thesis.bull_case.key_drivers %}<li>{{ d | humanize_nums }}</li>{% endfor %}</ul>
+        {% endif %}
+    </div>
+
+    <div class="thesis-block base">
+        <h3>Base Case</h3>
+        <p>{{ (thesis.base_case.thesis if thesis.base_case else '—') | humanize_nums }}</p>
+        {% if thesis.base_case and thesis.base_case.fair_value_assessment %}
+        <p class="muted"><em>{{ thesis.base_case.fair_value_assessment | humanize_nums }}</em></p>
+        {% endif %}
+    </div>
+
+    <div class="thesis-block bear">
+        <h3>Bear Case</h3>
+        <p>{{ (thesis.bear_case.thesis if thesis.bear_case else '—') | humanize_nums }}</p>
+        {% if thesis.bear_case and thesis.bear_case.key_risks %}
+        <ul>{% for r in thesis.bear_case.key_risks %}<li>{{ r | humanize_nums }}</li>{% endfor %}</ul>
+        {% endif %}
+    </div>
+
+    {% if thesis.catalysts %}
+    <div class="thesis-block catalysts">
+        <h3>Key Catalysts</h3>
+        <ul>{% for c in thesis.catalysts %}<li>{{ c | humanize_nums }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+</section>
+
+<!-- =============== PAGE 2b : BUSINESS OVERVIEW (10-K) =============== -->
+{% if annual_summary and (annual_summary.business_overview or annual_summary.mdna_themes or annual_summary.strategic_initiatives) %}
+<section class="page">
+    <h2 class="section-title">Business Overview</h2>
+    <p class="muted">Sourced from the latest Form 10-K filed with the SEC.</p>
+
+    {% if annual_summary.business_overview %}
+    <h3>What the Company Does</h3>
+    <p>{{ annual_summary.business_overview }}</p>
+    {% endif %}
+
+    {% if annual_summary.segment_highlights %}
+    <h3>Segment Highlights</h3>
+    <table class="fin-table">
+        <thead><tr><th>Segment</th><th>Commentary</th></tr></thead>
+        <tbody>
+        {% for s in annual_summary.segment_highlights %}
+            <tr><td>{{ s.name }}</td><td>{{ s.note }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if annual_summary.mdna_themes %}
+    <h3>MD&amp;A — Management's Emphasis</h3>
+    <ul>{% for t in annual_summary.mdna_themes %}<li>{{ t }}</li>{% endfor %}</ul>
+    {% endif %}
+
+    {% if annual_summary.strategic_initiatives %}
+    <h3>Strategic Initiatives</h3>
+    <ul>{% for s in annual_summary.strategic_initiatives %}<li>{{ s }}</li>{% endfor %}</ul>
+    {% endif %}
+
+    {% if annual_summary.key_risk_factors %}
+    <h3>Key Risk Factors (as disclosed)</h3>
+    <ul>{% for r in annual_summary.key_risk_factors %}<li>{{ r }}</li>{% endfor %}</ul>
+    {% endif %}
+
+    {% if annual_summary.investor_takeaways %}
+    <h3>Investor Takeaways</h3>
+    <ul>{% for t in annual_summary.investor_takeaways %}<li>{{ t }}</li>{% endfor %}</ul>
+    {% endif %}
+</section>
+{% endif %}
+
+<!-- =============== PAGE 3 : FINANCIAL ANALYSIS =============== -->
+<section class="page">
+    <h2 class="section-title">Financial Analysis</h2>
+
+    {% if financials_history %}
+    <h3>Historical Financials (SEC EDGAR — last {{ financials_history | length }} periods)</h3>
+    <table class="fin-table">
+        <thead>
+            <tr>
+                <th>Period End</th>
+                <th>Revenue</th>
+                <th>Gross Profit</th>
+                <th>Operating Income</th>
+                <th>Net Income</th>
+                <th>CFO</th>
+                <th>CapEx</th>
+                <th>Equity</th>
+                <th>EPS</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in financials_history %}
+            <tr>
+                <td>{{ row.period_end }}</td>
+                <td>{{ row.revenue | fmt_bn }}</td>
+                <td>{{ row.gross_profit | fmt_bn }}</td>
+                <td>{{ row.operating_income | fmt_bn }}</td>
+                <td>{{ row.net_income | fmt_bn }}</td>
+                <td>{{ row.operating_cash_flow | fmt_bn }}</td>
+                <td>{{ row.capex | fmt_bn }}</td>
+                <td>{{ row.stockholders_equity | fmt_bn }}</td>
+                <td>{% if row.eps %}${{ '%.2f' | format(row.eps) }}{% else %}—{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if charts.revenue_history %}
+    <div class="chart"><img src="{{ charts.revenue_history }}" alt="Revenue history"></div>
+    <p class="chart-caption">
+        <strong>Source:</strong> Historical bars from SEC EDGAR XBRL filings (10-K/10-Q annual revenue).
+        <strong>F1–F5</strong> = projected Forecast Years 1 through 5, computed by the DCF engine
+        (no LLM): starting from the latest reported revenue, growth for years 1–3 is set to the
+        trailing 3-year YoY growth rate, then fades linearly toward the terminal growth
+        assumption ({{ (assumptions.terminal_growth_rate * 100) if assumptions.terminal_growth_rate else 2.5 }}%) by year&nbsp;5.
+        Year-by-year growth rates used:
+        {% if assumptions.revenue_growth_rates %}
+          {% for g in assumptions.revenue_growth_rates -%}
+            {{ (g*100) | round(1) }}%{{ ", " if not loop.last else "" }}
+          {%- endfor %}.
+        {% else %} n/a.{% endif %}
+    </p>
+    {% endif %}
+
+    {% if quarterly_financials and quarterly_financials.revenue %}
+    <h3>Quarterly Trend (last {{ quarterly_financials.revenue | length }} quarters)</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Period End</th>
+                <th>Revenue</th>
+                <th>Operating Income</th>
+                <th>Net Income</th>
+                <th>CFO</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in quarterly_financials.revenue[:8] %}
+            {% set end = row.period_end %}
+            <tr>
+                <td>{{ end }}</td>
+                <td>{{ row.value | fmt_bn }}</td>
+                <td>{% set m = (quarterly_financials.operating_income or []) | selectattr('period_end','equalto',end) | list %}
+                    {% if m %}{{ m[0].value | fmt_bn }}{% else %}—{% endif %}</td>
+                <td>{% set m = (quarterly_financials.net_income or []) | selectattr('period_end','equalto',end) | list %}
+                    {% if m %}{{ m[0].value | fmt_bn }}{% else %}—{% endif %}</td>
+                <td>{% set m = (quarterly_financials.operating_cash_flow or []) | selectattr('period_end','equalto',end) | list %}
+                    {% if m %}{{ m[0].value | fmt_bn }}{% else %}—{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if ratios %}
+    <h3>Key Ratios (most recent year)</h3>
+    <table class="fin-table">
+        <thead><tr><th>Category</th><th>Metric</th><th>Value</th></tr></thead>
+        <tbody>
+        {% for category, metrics in ratios.items() %}
+            {% if metrics is mapping %}
+            {% for metric, value in metrics.items() %}
+            <tr>
+                <td>{{ category | replace('_', ' ') | title }}</td>
+                <td>{{ metric | replace('_', ' ') | title }}</td>
+                <td>
+                    {% if value is none %}—
+                    {% elif value is number and -1 < value < 1 and value != 0 %}{{ (value*100) | round(2) }}%
+                    {% elif value is number and value > 1e6 %}{{ value | fmt_bn }}
+                    {% elif value is number %}{{ value | round(2) }}x
+                    {% else %}{{ value }}{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            {% endif %}
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</section>
+
+<!-- =============== PAGE 4 : VALUATION =============== -->
+<section class="page">
+    <h2 class="section-title">Valuation — {{ model_description }}</h2>
+
+    <div class="val-summary">
+        <div class="big-number">
+            <div class="label">Fair Value</div>
+            <div class="value">{{ fair_value | fmt_currency }}</div>
+            <div class="sub {{ 'up' if (upside_pct or 0) > 0 else 'down' }}">
+                {{ upside_pct | fmt_pct }} vs current
+            </div>
+        </div>
+    </div>
+
+    {# --- Model-specific detail --- #}
+    {% if primary.model == 'dcf_fcff' %}
+    <h3>DCF — FCFF 2-Stage</h3>
+    <table class="kv-table">
+        <tr><td>Enterprise Value</td><td>{{ primary.enterprise_value | fmt_bn }}</td>
+            <td>WACC</td><td>{{ (primary.wacc*100) | round(2) }}%</td></tr>
+        <tr><td>Equity Value</td><td>{{ primary.equity_value | fmt_bn }}</td>
+            <td>Terminal Value (undisc.)</td><td>{{ primary.terminal_value | fmt_bn }}</td></tr>
+    </table>
+    <h4>Revenue Projection ($B)</h4>
+    <table class="data-table">
+        <tr>{% for i in range(primary.projected_revenue | length) %}<th>Year {{ i+1 }}</th>{% endfor %}</tr>
+        <tr>{% for v in primary.projected_revenue %}<td>{{ (v/1e9) | round(1) }}</td>{% endfor %}</tr>
+    </table>
+    <h4>Projected FCFF ($B)</h4>
+    <table class="data-table">
+        <tr>{% for i in range(primary.projected_fcff | length) %}<th>Year {{ i+1 }}</th>{% endfor %}</tr>
+        <tr>{% for v in primary.projected_fcff %}<td>{{ (v/1e9) | round(2) }}</td>{% endfor %}</tr>
+    </table>
+    {% if charts.sensitivity_heatmap %}
+    <h4>Sensitivity — WACC × Terminal Growth</h4>
+    <div class="chart"><img src="{{ charts.sensitivity_heatmap }}" alt="Sensitivity"></div>
+    <p class="chart-caption">
+        <strong>How to read:</strong> each cell is the model's fair value per share under a
+        different combination of WACC (row, discount rate) and terminal growth (column, long-run
+        growth beyond the forecast window). Green = above current price (upside); red = below
+        (downside). Baseline is the cell at the center row/column. Computed Python-side by
+        re-running the DCF over a 5×5 grid — no LLM.
+    </p>
+    {% endif %}
+
+    {% elif primary.model == 'ddm' %}
+    <h3>Dividend Discount Model (2-Stage)</h3>
+    <table class="kv-table">
+        <tr><td>Cost of Equity</td><td>{{ (primary.cost_of_equity*100) | round(2) }}%</td>
+            <td>Terminal Value (undisc.)</td><td>${{ primary.terminal_value | round(2) }}</td></tr>
+    </table>
+    <h4>Projected Dividends per Share</h4>
+    <table class="data-table">
+        <tr>{% for i in range(primary.projected_dividends | length) %}<th>Year {{ i+1 }}</th>{% endfor %}</tr>
+        <tr>{% for v in primary.projected_dividends %}<td>${{ '%.3f' | format(v) }}</td>{% endfor %}</tr>
+    </table>
+
+    {% elif primary.model == 'residual_income' %}
+    <h3>Residual Income Model</h3>
+    <table class="kv-table">
+        <tr><td>Book Value Component</td><td>${{ primary.book_value_component | round(2) }}</td>
+            <td>PV Residual Income</td><td>${{ primary.pv_residual_income | round(2) }}</td></tr>
+        <tr><td>Terminal Component</td><td>${{ primary.terminal_component | round(2) }}</td>
+            <td>Cost of Equity (Beta × MRP + Rf)</td><td>n/a</td></tr>
+    </table>
+    <h4>Projected BVPS / EPS / Residual Income</h4>
+    <table class="data-table">
+        <tr><th>Year</th>{% for i in range(primary.projected_bvps | length) %}<th>{{ i+1 }}</th>{% endfor %}</tr>
+        <tr><td>BVPS</td>{% for v in primary.projected_bvps %}<td>${{ '%.2f' | format(v) }}</td>{% endfor %}</tr>
+        <tr><td>EPS</td>{% for v in primary.projected_eps %}<td>${{ '%.2f' | format(v) }}</td>{% endfor %}</tr>
+        <tr><td>RI</td>{% for v in primary.projected_ri %}<td>${{ '%.2f' | format(v) }}</td>{% endfor %}</tr>
+    </table>
+
+    {% elif primary.model == 'affo_reit' %}
+    <h3>AFFO-Based Valuation (REIT)</h3>
+    <table class="kv-table">
+        <tr><td>Implied P / AFFO</td><td>{{ primary.p_affo_implied }}x</td>
+            <td>Terminal Value (undisc.)</td><td>${{ primary.terminal_value | round(2) }}</td></tr>
+        {% if primary.nav_fair_value %}
+        <tr><td>NAV Fair Value</td><td>${{ primary.nav_fair_value | round(2) }}</td><td></td><td></td></tr>
+        {% endif %}
+    </table>
+    <h4>Projected AFFO / Dividends per Share</h4>
+    <table class="data-table">
+        <tr><th>Year</th>{% for i in range(primary.projected_affo | length) %}<th>{{ i+1 }}</th>{% endfor %}</tr>
+        <tr><td>AFFO</td>{% for v in primary.projected_affo %}<td>${{ '%.2f' | format(v) }}</td>{% endfor %}</tr>
+        <tr><td>Dividend</td>{% for v in primary.projected_dividends %}<td>${{ '%.2f' | format(v) }}</td>{% endfor %}</tr>
+    </table>
+
+    {% elif primary.model == 'dcf_cyclical' %}
+    <h3>Normalized DCF (Cyclical)</h3>
+    <table class="kv-table">
+        <tr><td>Cycle Position</td><td><strong>{{ primary.cycle_position | upper }}</strong></td>
+            <td>Normalized Revenue</td><td>{{ primary.normalized_revenue | fmt_bn }}</td></tr>
+        <tr><td>Normalized Margin</td><td>{{ (primary.normalized_margin*100) | round(2) }}%</td>
+            <td></td><td></td></tr>
+    </table>
+    <p class="muted">{{ primary.cycle_adjustment }}</p>
+    {% endif %}
+
+    {% if implied_values %}
+    <h4>Comparable Implied Values</h4>
+    <table class="data-table">
+        <tr><th>Method</th><th>Implied Fair Value</th></tr>
+        {% for method, value in implied_values.items() %}
+        <tr><td>{{ method | replace('_', ' ') | title }}</td><td>${{ '%.2f' | format(value) }}</td></tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+</section>
+
+<!-- =============== PAGE 5 : PEERS & INDUSTRY =============== -->
+<section class="page">
+    <h2 class="section-title">Peer Comparison & Industry Context</h2>
+
+    {% if charts.peer_comparison %}
+    <div class="chart"><img src="{{ charts.peer_comparison }}" alt="Peer comparison"></div>
+    <p class="chart-caption">
+        <strong>Source:</strong> EV/EBITDA ratio for each peer, pulled live from yfinance.
+        The target ticker is highlighted in orange; the dashed red line is the median across
+        the peer set. Peers are selected by GICS sector/sub-industry match (computed Python-side).
+        A bar above the median suggests relative premium valuation; below the median suggests
+        a relative discount on this multiple.
+    </p>
+    {% endif %}
+
+    {% if peers %}
+    <h3>Peer Set</h3>
+    <table class="fin-table">
+        <thead><tr><th>Ticker</th><th>EV/EBITDA</th><th>P/E</th><th>P/S</th></tr></thead>
+        <tbody>
+        {% for p in peers %}
+            <tr>
+                <td>{{ p.ticker }}</td>
+                <td>{% if p.ev_to_ebitda %}{{ p.ev_to_ebitda | round(1) }}x{% else %}—{% endif %}</td>
+                <td>{% if p.pe_ratio %}{{ p.pe_ratio | round(1) }}x{% else %}—{% endif %}</td>
+                <td>{% if p.ps_ratio %}{{ p.ps_ratio | round(1) }}x{% else %}—{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if industry_commentary %}
+    <h3>Competitive Positioning</h3>
+    <p>{{ industry_commentary.competitive_position or '—' }}</p>
+
+    {% if industry_commentary.strengths %}
+    <h4>Strengths</h4>
+    <ul>{% for s in industry_commentary.strengths %}<li>{{ s }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if industry_commentary.weaknesses %}
+    <h4>Weaknesses</h4>
+    <ul>{% for w in industry_commentary.weaknesses %}<li>{{ w }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% endif %}
+</section>
+
+<!-- =============== PAGE 6 : SHAREHOLDER MEETING & MATERIAL EVENTS =============== -->
+<section class="page">
+    <h2 class="section-title">Shareholder Meeting & Material Events</h2>
+    <p class="muted">Sourced from SEC EDGAR filings (DEF 14A proxy statements and Form 8-K).</p>
+
+    {% if meetings.proxy_summary %}
+    <h3>Shareholder Meeting (DEF 14A)</h3>
+    {% if proxy_statements and proxy_statements[0] %}
+    <p class="muted">
+        Filed {{ proxy_statements[0].filing_date | fmt_date }} —
+        Accession {{ proxy_statements[0].accession_number }}
+    </p>
+    {% endif %}
+    <table class="kv-table">
+        {% if meetings.proxy_summary.meeting_date %}
+        <tr><td>Meeting Date</td><td colspan="3">{{ meetings.proxy_summary.meeting_date }}</td></tr>
+        {% endif %}
+        {% if meetings.proxy_summary.executive_compensation_highlights %}
+        <tr><td>Executive Comp.</td><td colspan="3">{{ meetings.proxy_summary.executive_compensation_highlights }}</td></tr>
+        {% endif %}
+        {% if meetings.proxy_summary.governance_notes %}
+        <tr><td>Governance</td><td colspan="3">{{ meetings.proxy_summary.governance_notes }}</td></tr>
+        {% endif %}
+    </table>
+
+    {% if meetings.proxy_summary.voting_proposals %}
+    <h4>Voting Proposals</h4>
+    <ul>{% for p in meetings.proxy_summary.voting_proposals %}<li>{{ p }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if meetings.proxy_summary.director_nominees %}
+    <h4>Director Nominees</h4>
+    <p>{{ meetings.proxy_summary.director_nominees | join(', ') }}</p>
+    {% endif %}
+    {% endif %}
+
+    {% if meetings.material_events_summary %}
+    <h3>Recent Material Events (Form 8-K)</h3>
+    <table class="fin-table">
+        <thead><tr><th>Date</th><th>Disclosure</th></tr></thead>
+        <tbody>
+        {% for e in meetings.material_events_summary %}
+            <tr><td>{{ e.date }}</td><td>{{ e.item }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if meetings.key_takeaways_for_investors %}
+    <h3>Investor Takeaways</h3>
+    <ul>{% for t in meetings.key_takeaways_for_investors %}<li>{{ t }}</li>{% endfor %}</ul>
+    {% endif %}
+</section>
+
+{% if insider_transactions or institutional_holders or major_holders %}
+<!-- =============== OWNERSHIP & INSIDER ACTIVITY =============== -->
+<section class="page">
+    <h2 class="section-title">Ownership & Insider Activity</h2>
+    <p class="muted">Insider transactions and institutional holdings from yfinance.</p>
+
+    {% if major_holders %}
+    <h3>Holder Breakdown</h3>
+    <table class="kv-table">
+        {% for row in major_holders[:6] %}
+        <tr>
+            {% set _vals = row.values() | list %}
+            <td colspan="3">{{ _vals[1] if _vals|length > 1 else (_vals[0] if _vals else '') }}</td>
+            <td>{{ _vals[0] if _vals else '' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if insider_transactions %}
+    <h3>Recent Insider Transactions</h3>
+    <table class="fin-table">
+        <thead><tr><th>Insider</th><th>Position</th><th>Transaction</th><th>Shares</th><th>Date</th></tr></thead>
+        <tbody>
+        {% for tx in insider_transactions[:10] %}
+            <tr>
+                <td>{{ tx.get('Insider', tx.get('Name', '')) }}</td>
+                <td>{{ tx.get('Position', tx.get('Relation', '')) }}</td>
+                <td>{{ tx.get('Transaction', tx.get('Text', '')) }}</td>
+                <td>{{ tx.get('Shares', tx.get('Shares Traded', '')) }}</td>
+                <td>{{ (tx.get('Start Date') or tx.get('Date') or '') | string | truncate(10, True, '') }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if institutional_holders %}
+    <h3>Top Institutional Holders</h3>
+    <table class="fin-table">
+        <thead><tr><th>Holder</th><th>Shares</th><th>% Out</th><th>Value</th><th>Reported</th></tr></thead>
+        <tbody>
+        {% for h in institutional_holders[:10] %}
+            <tr>
+                <td>{{ h.get('Holder', '') }}</td>
+                <td>{{ h.get('Shares', '') }}</td>
+                <td>{% if h.get('pctHeld') %}{{ (h['pctHeld']*100) | round(2) }}%{% endif %}</td>
+                <td>{{ h.get('Value', '') | fmt_bn }}</td>
+                <td>{{ (h.get('Date Reported') or '') | string | truncate(10, True, '') }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</section>
+{% endif %}
+
+<!-- =============== PAGE 7 : RISKS =============== -->
+<section class="page">
+    <h2 class="section-title">Risks</h2>
+
+    {% if risks.overall_risk_rating %}
+    <p><strong>Overall Risk Rating:</strong> {{ risks.overall_risk_rating }}</p>
+    <p>{{ risks.risk_summary }}</p>
+    {% endif %}
+
+    {% for category in ['financial_risks', 'operational_risks', 'market_risks', 'macro_risks'] %}
+    {% if risks[category] %}
+    <h3>{{ category | replace('_', ' ') | title }}</h3>
+    <table class="fin-table">
+        <thead><tr><th>Risk</th><th>Severity</th><th>Likelihood</th></tr></thead>
+        <tbody>
+        {% for r in risks[category] %}
+            <tr>
+                <td>{{ r.risk }}</td>
+                <td class="sev-{{ (r.severity or 'medium') | lower }}">{{ r.severity }}</td>
+                <td>{{ r.likelihood }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% endfor %}
+</section>
+
+<!-- =============== PAGE 8 : APPENDIX =============== -->
+<section class="page appendix">
+    <h2 class="section-title">Appendix — Assumptions, Sources, QC</h2>
+
+    <h3>Valuation Assumptions</h3>
+    <table class="fin-table">
+        <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+        <tbody>
+        {% for key, value in assumptions.items() %}
+            <tr>
+                <td>{{ key | replace('_', ' ') }}</td>
+                <td>
+                    {% if value is number %}
+                        {% if -1 < value < 1 and value != 0 %}{{ (value*100) | round(2) }}%
+                        {% elif value > 1e6 %}{{ value | fmt_bn }}
+                        {% else %}{{ value | round(4) }}{% endif %}
+                    {% elif value is iterable and value is not string %}
+                        [{{ value | map('round', 4) | join(', ') }}]
+                    {% else %}{{ value }}{% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>SEC Filings Referenced</h3>
+    <table class="fin-table">
+        <thead><tr><th>Form</th><th>Filed</th><th>Accession</th></tr></thead>
+        <tbody>
+        {% for f in annual_filings %}
+        <tr><td>{{ f.form }}</td><td>{{ f.filing_date }}</td><td>{{ f.accession_number }}</td></tr>
+        {% endfor %}
+        {% for f in proxy_statements %}
+        <tr><td>{{ f.form }}</td><td>{{ f.filing_date }}</td><td>{{ f.accession_number }}</td></tr>
+        {% endfor %}
+        {% for f in material_events %}
+        <tr><td>{{ f.form }}</td><td>{{ f.filing_date }}</td><td>{{ f.accession_number }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    {% if qc_check %}
+    <h3>Automated QC Check</h3>
+    <div class="qc-block {{ 'qc-pass' if qc_check.passed else 'qc-fail' }}">
+        <strong>{{ 'PASSED' if qc_check.passed else 'FLAGS FOUND' }}</strong> —
+        {{ qc_check.overall_assessment }}
+    </div>
+    {% if qc_check.flags %}
+    <table class="fin-table">
+        <thead><tr><th>Issue</th><th>Severity</th><th>Detail</th></tr></thead>
+        <tbody>
+        {% for f in qc_check.flags %}
+        <tr>
+            <td>{{ f.issue }}</td>
+            <td class="sev-{{ (f.severity or 'medium') | lower }}">{{ f.severity }}</td>
+            <td>{{ f.detail }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% endif %}
+
+    <div class="disclaimer">
+        <strong>Disclaimer.</strong> This report is generated by an automated analysis system
+        using publicly available data from SEC EDGAR, Yahoo Finance, and FRED. All numerical
+        calculations are performed programmatically; narrative sections are authored by an LLM
+        (Groq) using the provided data only. Nothing herein constitutes investment advice.
+        Past performance does not guarantee future results. Always conduct independent
+        due diligence before making investment decisions.
+    </div>
+</section>
+
+</body>
+</html>

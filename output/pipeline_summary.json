@@ -1,0 +1,13 @@
+{
+  "total": 1,
+  "success": 1,
+  "failed": 0,
+  "tickers": [
+    {
+      "ticker": "KKR",
+      "status": "success",
+      "report": "output\\KKR_report_20260419.pdf",
+      "error": null
+    }
+  ]
+}

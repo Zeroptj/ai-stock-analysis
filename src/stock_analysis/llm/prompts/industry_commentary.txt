@@ -1,0 +1,36 @@
+Analyze the competitive positioning of {company_name} ({ticker}) within the {sector} sector.
+
+## Peer Comparison Data
+{comparables}
+
+## Instructions
+Based ONLY on the peer comparison data provided, analyze:
+
+1. **Competitive Position** — Where does {ticker} stand vs. peers on key metrics?
+2. **Valuation Relative to Peers** — Premium or discount? Justified?
+3. **Strengths** — Areas where {ticker} outperforms peers
+4. **Weaknesses** — Areas where {ticker} underperforms peers
+5. **Industry Trends** — Key dynamics affecting the sector
+
+IMPORTANT:
+- ONLY compare metrics from the provided data
+- Do NOT introduce external knowledge about the companies
+- State clearly when data is insufficient
+
+Respond in this JSON format:
+{{
+    "competitive_position": "...",
+    "valuation_assessment": {{
+        "premium_or_discount": "premium|discount|in-line",
+        "justification": "..."
+    }},
+    "strengths": ["..."],
+    "weaknesses": ["..."],
+    "industry_trends": ["..."],
+    "peer_ranking": {{
+        "profitability": "...",
+        "growth": "...",
+        "valuation": "..."
+    }},
+    "summary": "..."
+}}

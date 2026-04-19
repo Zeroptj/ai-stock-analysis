@@ -1,0 +1,49 @@
+Analyze {company_name} ({ticker}) and generate an investment thesis.
+
+## Financial Data
+{financials}
+
+## Valuation Results
+{valuation}
+
+## Market Data
+{market_data}
+
+## Instructions
+Based ONLY on the data above, generate:
+
+1. **Bull Case** — What would drive the stock significantly higher? (cite specific metrics)
+2. **Base Case** — Most likely scenario with fair value assessment
+3. **Bear Case** — What risks could cause significant downside?
+4. **Investment Rating** — BUY / HOLD / SELL with conviction level (HIGH/MEDIUM/LOW)
+5. **Key Catalysts** — 3-5 near-term events that could move the stock
+
+IMPORTANT:
+- ONLY reference numbers from the provided data
+- Do NOT invent financial figures
+- If data is insufficient for a claim, say so explicitly
+- Format large dollar amounts compactly: use $XB (billions) or $XM (millions),
+  not full digit strings. Example: write "$12.3B revenue" not "$12,300,000,000 revenue".
+
+Respond in this JSON format:
+{{
+    "bull_case": {{
+        "thesis": "...",
+        "target_upside_pct": 0,
+        "key_drivers": ["..."]
+    }},
+    "base_case": {{
+        "thesis": "...",
+        "fair_value_assessment": "...",
+        "key_assumptions": ["..."]
+    }},
+    "bear_case": {{
+        "thesis": "...",
+        "target_downside_pct": 0,
+        "key_risks": ["..."]
+    }},
+    "rating": "BUY|HOLD|SELL",
+    "conviction": "HIGH|MEDIUM|LOW",
+    "catalysts": ["..."],
+    "one_line_summary": "..."
+}}
