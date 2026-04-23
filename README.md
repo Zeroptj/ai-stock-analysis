@@ -166,14 +166,31 @@ A sidecar MCP stdio server that exposes the SEC client as tools, so Claude Deskt
 | `get_material_events` | 8-K list with metadata |
 | `get_filing_text` | Full text of a filing (HTML → plain text) |
 
-**Claude Desktop config entry:**
+#### Setting up with Claude Desktop
+
+Add the following to your `claude_desktop_config.json` (usually located at `%APPDATA%\Claude\claude_desktop_config.json` on Windows or `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
 ```json
 {
   "mcpServers": {
-    "sec-edgar": { "command": "sec-mcp-server" }
+    "sec-edgar": {
+      "command": "C:\\path\\to\\your\\ai-stock-analysis\\.venv\\Scripts\\sec-mcp-server.exe",
+      "args": []
+    }
   }
 }
 ```
+*(Make sure to replace the path with your actual absolute path to the `.venv`)*
+
+#### Setting up with Claude CLI
+
+If you use the `claude` CLI, you can easily add the MCP server by running the following command in your terminal (make sure to provide the absolute path to `sec-mcp-server.exe`):
+
+```bash
+claude mcp add sec-mcp-server "C:\path\to\your\ai-stock-analysis\.venv\Scripts\sec-mcp-server.exe"
+```
+
+Verify it was added successfully by running `claude mcp list`.
 
 ---
 

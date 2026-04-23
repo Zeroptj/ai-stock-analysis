@@ -1,0 +1,62 @@
+# =============================================
+# AI Stock Analysis — Configuration
+# =============================================
+
+# --- API Keys ---
+# groq_api_key and fred_api_key are loaded from .env (see .env.example)
+api_keys:
+  sec_user_agent: "YourName your@email.com"  # SEC EDGAR requires this
+
+# --- Screening Criteria ---
+screening:
+  ema_fast: 9
+  ema_slow: 21
+  rsi_period: 14
+  rsi_oversold: 30
+  rsi_overbought: 70
+  volume_surge_multiplier: 1.5  # volume > 1.5x average
+  min_market_cap: 10_000_000_000  # $10B minimum
+  max_candidates: 30
+
+# --- DCF Model Defaults ---
+dcf:
+  projection_years: 5
+  terminal_growth_rate: 0.025  # 2.5%
+  risk_free_rate_source: "fred"  # or "manual"
+  risk_free_rate_manual: 0.043
+  market_risk_premium: 0.055
+  tax_rate: 0.21
+  wacc_sensitivity_range: [0.06, 0.08, 0.10, 0.12, 0.14]
+  terminal_growth_sensitivity_range: [0.015, 0.020, 0.025, 0.030, 0.035]
+
+# --- LLM Settings ---
+llm:
+  provider: "groq"
+  model_main: "llama-3.3-70b-versatile"
+  model_qc: "llama-3.1-8b-instant"
+  max_retries: 3
+  temperature: 0.3
+  max_tokens_thesis: 2000
+  max_tokens_risk: 1500
+  max_tokens_industry: 1500
+  max_tokens_annual: 2000
+  max_tokens_meetings: 1500
+  max_tokens_qc: 500
+
+# --- Report Settings ---
+report:
+  page_size: "A4"
+  output_format: "pdf"
+  output_dir: "output"
+  include_appendix: true
+  include_esg: true
+
+# --- Database ---
+database:
+  path: "data/stock_analysis.db"
+  cache_ttl_hours: 24  # re-fetch data older than this
+
+# --- Logging ---
+logging:
+  level: "INFO"
+  format: "json"  # or "console"

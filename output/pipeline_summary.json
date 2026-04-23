@@ -4,9 +4,9 @@
   "failed": 0,
   "tickers": [
     {
-      "ticker": "KKR",
+      "ticker": "AAPL",
       "status": "success",
-      "report": "output\\KKR_report_20260419.pdf",
+      "report": "output\\AAPL_report_20260420.pdf",
       "error": null
     }
   ]

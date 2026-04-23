@@ -24,6 +24,7 @@ env/
 # Environment
 .env
 .env.local
+config/settings.yaml
 
 # OS
 .DS_Store
