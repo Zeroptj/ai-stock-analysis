@@ -68,25 +68,36 @@ async def get_cik(ticker: str, client: httpx.AsyncClient) -> str:
     raise ValueError(f"CIK not found for ticker: {ticker} (tried {sorted(variants)})")
 
 
-async def get_company_facts(ticker: str, client: httpx.AsyncClient) -> dict[str, Any]:
-    """Fetch all XBRL facts for a company (revenue, net income, assets, etc.) — cached 24h."""
-    from stock_analysis.database import CacheEntry, get_session
-    from datetime import timedelta
+async def get_company_facts(
+    ticker: str,
+    client: httpx.AsyncClient,
+    use_cache: bool = True,
+) -> dict[str, Any]:
+    """Fetch all XBRL facts for a company (revenue, net income, assets, etc.).
+
+    Set use_cache=False to bypass the SQLite cache entirely (always hits SEC EDGAR).
+    """
     import json as _json
+    from datetime import timedelta
 
     key = f"sec_facts:{ticker.upper()}"
 
-    # 1) Check cache
-    session = get_session()
-    try:
-        entry = session.query(CacheEntry).filter_by(key=key).first()
-        if entry and (datetime.utcnow() - entry.fetched_at) < timedelta(hours=24):
-            logger.debug("cache_hit", key=key)
-            return _json.loads(entry.value_json)
-    finally:
-        session.close()
+    if use_cache:
+        try:
+            from stock_analysis.database import CacheEntry, get_session, init_db
+            init_db()
+            session = get_session()
+            try:
+                entry = session.query(CacheEntry).filter_by(key=key).first()
+                if entry and (datetime.utcnow() - entry.fetched_at) < timedelta(hours=24):
+                    logger.debug("cache_hit", key=key)
+                    return _json.loads(entry.value_json)
+            finally:
+                session.close()
+        except Exception as exc:
+            logger.warning("cache_unavailable", key=key, error=str(exc))
+            use_cache = False
 
-    # 2) Miss — fetch & store
     cik = await get_cik(ticker, client)
     url = f"{SEC_COMPANY_FACTS_URL}/CIK{cik}.json"
     logger.info("fetching_company_facts", ticker=ticker, url=url)
@@ -94,18 +105,24 @@ async def get_company_facts(ticker: str, client: httpx.AsyncClient) -> dict[str,
     resp.raise_for_status()
     data = resp.json()
 
-    session = get_session()
-    try:
-        entry = session.query(CacheEntry).filter_by(key=key).first()
-        payload = _json.dumps(data, default=str)
-        if entry:
-            entry.value_json = payload
-            entry.fetched_at = datetime.utcnow()
-        else:
-            session.add(CacheEntry(key=key, value_json=payload, fetched_at=datetime.utcnow()))
-        session.commit()
-    finally:
-        session.close()
+    if use_cache:
+        try:
+            from stock_analysis.database import CacheEntry, get_session
+            session = get_session()
+            try:
+                entry = session.query(CacheEntry).filter_by(key=key).first()
+                payload = _json.dumps(data, default=str)
+                if entry:
+                    entry.value_json = payload
+                    entry.fetched_at = datetime.utcnow()
+                else:
+                    session.add(CacheEntry(key=key, value_json=payload, fetched_at=datetime.utcnow()))
+                session.commit()
+            finally:
+                session.close()
+        except Exception as exc:
+            logger.warning("cache_write_failed", key=key, error=str(exc))
+
     return data
 
 

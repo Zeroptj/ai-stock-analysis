@@ -141,7 +141,7 @@ async def list_tools() -> list[Tool]:
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     async with httpx.AsyncClient(timeout=60.0) as client:
         if name == "get_company_facts":
-            facts = await get_company_facts(arguments["ticker"], client)
+            facts = await get_company_facts(arguments["ticker"], client, use_cache=False)
             return [TextContent(type="text", text=_dumps({
                 "entity": facts.get("entityName"),
                 "cik": facts.get("cik"),
@@ -149,7 +149,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             }))]
 
         if name == "get_financial_summary":
-            facts = await get_company_facts(arguments["ticker"], client)
+            facts = await get_company_facts(arguments["ticker"], client, use_cache=False)
             summary = _extract_financial_facts(facts)
             years = int(arguments.get("years", 5))
             trimmed = {k: v[:years] for k, v in summary.items()}
