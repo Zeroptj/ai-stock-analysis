@@ -4,9 +4,9 @@
   "failed": 0,
   "tickers": [
     {
-      "ticker": "AAPL",
+      "ticker": "MSFT",
       "status": "success",
-      "report": "output\\AAPL_report_20260420.pdf",
+      "report": "output\\MSFT_report_20260424.pdf",
       "error": null
     }
   ]

@@ -2,6 +2,7 @@
 name = "ai-stock-analysis"
 version = "0.1.0"
 description = "ระบบวิเคราะห์หุ้น S&P 500 อัตโนมัติ — Buy-side quality research reports"
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     # Async & HTTP
