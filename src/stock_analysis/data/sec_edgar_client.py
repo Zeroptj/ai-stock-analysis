@@ -242,29 +242,71 @@ def _extract_financial_facts(facts: dict[str, Any], frequency: str = "annual") -
         )
 
     def _get_annual_values(concept: str, max_years: int = 10) -> list[dict]:
+        """True full-year facts: 10-K (or 10-K/A) with FP=FY and ~365-day duration.
+
+        Without the duration check, some concepts leak partial-period facts
+        tagged as FY into the annual table — e.g. MSFT's revenue series shows
+        2017-03-31 / 2016-12-31 / 2016-09-30 entries from non-standard tag
+        variants whose period is really one quarter.
+        """
+        from datetime import date
+
         data = _units_for(concept)
-        annual = [
-            item for item in data
-            if item.get("form") == "10-K" and item.get("fp") == "FY"
-        ]
+        annual: list[dict] = []
+        for item in data:
+            if item.get("form") not in ("10-K", "10-K/A") or item.get("fp") != "FY":
+                continue
+            end = item.get("end")
+            if not end:
+                continue
+            start = item.get("start")
+            if start:
+                # Flow metric — keep only ~365-day windows
+                try:
+                    duration = (date.fromisoformat(end) - date.fromisoformat(start)).days
+                except ValueError:
+                    continue
+                if not (340 <= duration <= 380):
+                    continue
+            # No start → instant snapshot (balance-sheet metric); accept
+            annual.append(item)
+
         annual.sort(key=lambda x: x.get("end", ""), reverse=True)
         return annual[:max_years]
 
     def _get_quarterly_values(concept: str, max_quarters: int = 12) -> list[dict]:
-        """Quarters from 10-Q (Q1-Q3) + 10-K Q4 implied. Dedupe by end date."""
+        """Single-quarter values from 10-Q.
+
+        XBRL allows both single-quarter facts (~90-day duration) and YTD
+        cumulative facts (~180/270-day duration). We keep only single-quarter
+        durations so revenue/income/CFO show the period they actually cover.
+        10-K FY entries are intentionally excluded — an FY value is the full
+        year, not Q4. Showing Q4 would require Q4 = FY − (Q1+Q2+Q3), which is
+        a future enhancement; for now Q4 is left blank rather than wrong.
+        """
+        from datetime import date
+
         data = _units_for(concept)
-        quarters = [
-            item for item in data
-            if (
-                (item.get("form") == "10-Q" and item.get("fp") in ("Q1", "Q2", "Q3"))
-                or (item.get("form") == "10-K" and item.get("fp") == "FY")
-            )
-        ]
-        # Keep only items with a "start" field (duration / quarterly), not
-        # instant snapshots — unless this concept is balance-sheet (instant).
-        has_start = [q for q in quarters if q.get("start")]
-        if has_start:
-            quarters = has_start
+        quarters: list[dict] = []
+        for item in data:
+            if item.get("form") != "10-Q" or item.get("fp") not in ("Q1", "Q2", "Q3"):
+                continue
+            end = item.get("end")
+            if not end:
+                continue
+            start = item.get("start")
+            if start:
+                # Flow metric: keep only facts that cover one fiscal quarter
+                # (~90 days). This is what filters out YTD cumulative restatements.
+                try:
+                    duration = (date.fromisoformat(end) - date.fromisoformat(start)).days
+                except ValueError:
+                    continue
+                if not (80 <= duration <= 100):
+                    continue
+            # No start → instant snapshot (balance-sheet metric); keep as-is.
+            quarters.append(item)
+
         quarters.sort(key=lambda x: x.get("end", ""), reverse=True)
         return quarters[:max_quarters]
 
@@ -313,9 +355,24 @@ def _extract_financial_facts(facts: dict[str, Any], frequency: str = "annual") -
                                "WeightedAverageNumberOfShareOutstandingBasicAndDiluted"],
 
         # --- Cash flow ---
-        "operating_cash_flow": ["NetCashProvidedByOperatingActivities"],
-        "investing_cash_flow": ["NetCashProvidedByUsedInInvestingActivities"],
-        "financing_cash_flow": ["NetCashProvidedByUsedInFinancingActivities"],
+        # Issuers split between the "UsedIn" and non-"UsedIn" tag forms; some
+        # use the …ContinuingOperations variant. Union all of them so MSFT/
+        # AAPL/JPM-class names don't all read n/a.
+        "operating_cash_flow": [
+            "NetCashProvidedByUsedInOperatingActivities",
+            "NetCashProvidedByOperatingActivities",
+            "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
+        ],
+        "investing_cash_flow": [
+            "NetCashProvidedByUsedInInvestingActivities",
+            "NetCashProvidedByInvestingActivities",
+            "NetCashProvidedByUsedInInvestingActivitiesContinuingOperations",
+        ],
+        "financing_cash_flow": [
+            "NetCashProvidedByUsedInFinancingActivities",
+            "NetCashProvidedByFinancingActivities",
+            "NetCashProvidedByUsedInFinancingActivitiesContinuingOperations",
+        ],
         "capex": ["PaymentsToAcquirePropertyPlantAndEquipment"],
         "depreciation": ["DepreciationDepletionAndAmortization", "Depreciation"],
         "stock_based_comp": ["ShareBasedCompensation"],

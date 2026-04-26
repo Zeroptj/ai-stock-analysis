@@ -22,8 +22,15 @@ IMPORTANT:
 - ONLY reference numbers from the provided data
 - Do NOT invent financial figures
 - If data is insufficient for a claim, say so explicitly
-- Format large dollar amounts compactly: use $XB (billions) or $XM (millions),
-  not full digit strings. Example: write "$12.3B revenue" not "$12,300,000,000 revenue".
+- When the data already contains a `*_display` string (e.g. `enterprise_value_display`,
+  `fair_value_display`, `upside_pct_display`, `fair_value_vs_current`, `wacc_display`),
+  QUOTE THAT STRING VERBATIM in your narrative. Do NOT re-format the underlying raw
+  number — you will misread the magnitude (e.g. "$1.95T" must not become "$195B").
+- Percentage fields ending in `_display` are already in percent units with a sign
+  (e.g. "-37.52%"). Do NOT divide them by 100, do NOT drop the sign, do NOT label a
+  decimal share like 0.3752 as "0.3752%" — the correct read is "37.52%".
+- Format any other large dollar amounts compactly: use $XT / $XB / $XM, not full
+  digit strings. Example: write "$12.3B revenue" not "$12,300,000,000 revenue".
 
 Respond in this JSON format:
 {{

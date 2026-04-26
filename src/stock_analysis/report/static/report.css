@@ -323,7 +323,9 @@ h4 {
 .val-summary { margin: 8px 0 16px 0; }
 .big-number {
     display: inline-block;
-    padding: 14px 22px;
+    padding: 14px 28px;            /* extra horizontal room so letter-spaced
+                                      uppercase headings don't clip the first
+                                      character ("FAIR VALUE" → "AIR VALUE") */
     background: linear-gradient(135deg, #0B3D91 0%, #1D4ED8 100%);
     color: #fff;
     border-radius: 5px;
@@ -332,9 +334,12 @@ h4 {
 }
 .big-number .label {
     font-size: 9pt;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;           /* was 1.5px — Chromium occasionally clips
+                                      the first letter of a centered, uppercase,
+                                      letter-spaced label inside inline-block */
     text-transform: uppercase;
     opacity: 0.85;
+    padding: 0 4px;                /* belt-and-braces inner padding */
 }
 .big-number .value {
     font-size: 28pt;

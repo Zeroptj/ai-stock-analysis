@@ -3,6 +3,11 @@ Analyze the competitive positioning of {company_name} ({ticker}) within the {sec
 ## Peer Comparison Data
 {comparables}
 
+## Overall Investment Stance (already decided by the thesis pass)
+- Rating: {thesis_rating}
+- One-line thesis: {thesis_summary}
+- DCF read: {fair_value_vs_current}
+
 ## Instructions
 Based ONLY on the peer comparison data provided, analyze:
 
@@ -16,6 +21,12 @@ IMPORTANT:
 - ONLY compare metrics from the provided data
 - Do NOT introduce external knowledge about the companies
 - State clearly when data is insufficient
+- Your narrative MUST be consistent with the Overall Investment Stance above. If
+  the thesis is SELL because the DCF says overvalued, do NOT then write that the
+  stock looks attractive on peer multiples without explicitly reconciling the
+  two views (e.g. "trades cheap on P/E but DCF still implies downside because…").
+  A peer paragraph that flatly contradicts the recommendation makes the report
+  internally inconsistent.
 
 Respond in this JSON format:
 {{

@@ -107,7 +107,15 @@ def build_context(analysis: dict[str, Any]) -> dict[str, Any]:
     screening = analysis.get("screening", {}) or {}
 
     target_mult = comps.get("target_multiples", {}) or {}
+    val_ratios = (ratios.get("valuation") if isinstance(ratios, dict) else None) or {}
     charts = generate_all_charts(analysis)
+
+    # Single source of truth for headline multiples — calc_engine ratios first
+    # (computed from SEC EPS / EBITDA), yfinance .info as fallback. Without
+    # this, page 1 (yfinance) and page 5 (ratios) showed different P/E values.
+    pe_unified = val_ratios.get("pe_ratio") or target_mult.get("pe_ratio")
+    ev_ebitda_unified = val_ratios.get("ev_to_ebitda") or target_mult.get("ev_to_ebitda")
+    ps_unified = val_ratios.get("price_to_sales") or target_mult.get("price_to_sales")
 
     # Market cap: shares × price (SEC shares + current price)
     shares = primary.get("assumptions", {}).get("shares_outstanding", 0) or 0
@@ -135,9 +143,9 @@ def build_context(analysis: dict[str, Any]) -> dict[str, Any]:
         "enterprise_value": primary.get("enterprise_value"),
         "wacc": primary.get("wacc"),
         "cost_of_equity": primary.get("cost_of_equity"),
-        "ev_ebitda": target_mult.get("ev_to_ebitda"),
-        "pe_ratio": target_mult.get("pe_ratio"),
-        "ps_ratio": target_mult.get("ps_ratio"),
+        "ev_ebitda": ev_ebitda_unified,
+        "pe_ratio": pe_unified,
+        "ps_ratio": ps_unified,
 
         # Comparables
         "comps": comps,

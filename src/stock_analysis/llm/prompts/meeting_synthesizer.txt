@@ -43,3 +43,6 @@ RULES:
 - If a field cannot be determined, return null or an empty list.
 - Keep each string under 200 characters.
 - No markdown, no commentary — JSON only.
+- For `director_nominees`: list ALL nominees mentioned in the proxy, not just
+  the first one you see. Boards typically have 8–14 members; if you only return
+  one name when the source clearly lists more, the report is wrong.

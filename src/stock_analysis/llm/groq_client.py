@@ -21,11 +21,29 @@ logger = structlog.get_logger(__name__)
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 
 # --- Rate limiter ---
-# Groq free tier: ~30 RPM. We run 6 LLM calls / ticker now, so when multiple
-# tickers run back-to-back we need a sliding-window throttle to avoid 429s.
-_RPM_LIMIT = 25              # keep buffer under Groq free-tier 30 RPM
-_MIN_GAP_SECONDS = 2.0        # minimum gap between two consecutive calls
+# Groq free tier: 30 RPM AND 12K TPM on llama-3.3-70b. The TPM cap is what
+# actually trips first when payloads are large, so we throttle conservatively
+# on RPM to give TPM more breathing room — and back off harder for ~90s after
+# any 429 we observe (suggests we're brushing the TPM ceiling).
+_RPM_LIMIT = 18              # buffer well under 30 RPM
+_MIN_GAP_SECONDS = 4.0        # baseline gap between two consecutive calls
+_COOLDOWN_GAP_SECONDS = 8.0   # gap during the cooldown window after a 429
+_COOLDOWN_DURATION = 90.0     # how long to apply the elevated gap
 _REQUEST_LOG: list[float] = []  # monotonic timestamps of recent calls
+_LAST_429_AT: float = 0.0       # monotonic timestamp of the most recent 429
+
+
+def _note_rate_limit() -> None:
+    """Record a 429 so subsequent calls space themselves out further."""
+    global _LAST_429_AT
+    _LAST_429_AT = time.monotonic()
+
+
+def _current_min_gap() -> float:
+    """Use the cooldown gap if a 429 happened in the last _COOLDOWN_DURATION."""
+    if _LAST_429_AT and (time.monotonic() - _LAST_429_AT) < _COOLDOWN_DURATION:
+        return _COOLDOWN_GAP_SECONDS
+    return _MIN_GAP_SECONDS
 
 
 def _throttle() -> None:
@@ -42,9 +60,10 @@ def _throttle() -> None:
         now = time.monotonic()
         _REQUEST_LOG = [t for t in _REQUEST_LOG if now - t < 60]
 
-    # Minimum gap between successive calls
+    # Minimum gap between successive calls — elevated during 429 cooldown
+    min_gap = _current_min_gap()
     if _REQUEST_LOG:
-        gap = _MIN_GAP_SECONDS - (now - _REQUEST_LOG[-1])
+        gap = min_gap - (now - _REQUEST_LOG[-1])
         if gap > 0:
             time.sleep(gap)
 
@@ -125,6 +144,7 @@ def call_llm(
             except Exception:
                 retry_after = None
             wait = retry_after if retry_after else min(2 ** attempt * 10, 90)
+            _note_rate_limit()  # spaces subsequent calls further apart for 90s
             logger.warning("rate_limited", wait=wait, attempt=attempt + 1)
             time.sleep(wait)
 
@@ -206,8 +226,16 @@ def generate_industry_commentary(
     company_name: str,
     sector: str,
     comparables: dict[str, Any],
+    thesis_rating: str | None = None,
+    thesis_summary: str | None = None,
+    fair_value_vs_current: str | None = None,
 ) -> dict[str, Any]:
-    """Generate industry and competitive positioning commentary."""
+    """Generate industry and competitive positioning commentary.
+
+    Optional thesis_* args let the LLM align its peer narrative with the
+    overall recommendation — without them, peer commentary often contradicts
+    the SELL/BUY rating produced by the thesis pass.
+    """
     template = _load_prompt("industry_commentary.txt")
 
     prompt = template.format(
@@ -215,6 +243,9 @@ def generate_industry_commentary(
         company_name=company_name,
         sector=sector,
         comparables=json.dumps(comparables, indent=2, default=str),
+        thesis_rating=thesis_rating or "(not yet determined)",
+        thesis_summary=thesis_summary or "(not yet determined)",
+        fair_value_vs_current=fair_value_vs_current or "(not yet determined)",
     )
 
     system = (
@@ -275,6 +306,45 @@ def generate_annual_report_summary(
     return json.loads(response)
 
 
+def _extract_proxy_for_llm(text: str, total_cap: int = 25_000) -> str:
+    """Build a proxy-statement payload for the LLM that prioritizes the
+    Director Nominees section. DEF 14A documents are huge (Microsoft's runs
+    into the hundreds of pages), and a flat truncation usually drops the
+    nominee list entirely — yielding the "1 of 12 directors" bug."""
+    if not text:
+        return "(no proxy text available)"
+
+    headings = (
+        "director nominees",
+        "nominees for director",
+        "nominees for election as director",
+        "election of directors",
+        "biographical information",
+        "our board of directors",
+    )
+    lower = text.lower()
+    director_idx = -1
+    for h in headings:
+        idx = lower.find(h)
+        if idx != -1:
+            director_idx = idx
+            break
+
+    if director_idx == -1:
+        return text[:total_cap]
+
+    # Carve out a generous window around the directors section so all nominees
+    # land in the same chunk. Keep the start of the doc too (cover, agenda).
+    director_window = text[max(0, director_idx - 500): director_idx + 15_000]
+    head = text[:8_000]
+    combined = (
+        head
+        + "\n\n[…document truncated — DIRECTOR NOMINEES SECTION FOLLOWS…]\n\n"
+        + director_window
+    )
+    return combined[:total_cap]
+
+
 def generate_meeting_synthesis(
     ticker: str,
     company_name: str,
@@ -296,7 +366,7 @@ def generate_meeting_synthesis(
         company_name=company_name,
         proxy_date=latest_proxy.get("filing_date", "n/a"),
         proxy_url=latest_proxy.get("document_url", "n/a"),
-        proxy_text=(latest_proxy.get("text") or "(no proxy text available)")[:15_000],
+        proxy_text=_extract_proxy_for_llm(latest_proxy.get("text") or ""),
         event_date=latest_event.get("filing_date", "n/a"),
         event_url=latest_event.get("document_url", "n/a"),
         event_text=(latest_event.get("text") or "(no 8-K text available)")[:5_000],

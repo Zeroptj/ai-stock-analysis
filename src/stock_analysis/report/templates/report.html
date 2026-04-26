@@ -77,7 +77,7 @@
     </div>
 
     {% if thesis.one_line_summary %}
-    <div class="one-liner"><strong>Summary — </strong>{{ thesis.one_line_summary }}</div>
+    <div class="one-liner"><strong>Summary — </strong>{{ thesis.one_line_summary | humanize_nums }}</div>
     {% endif %}
 
     <table class="kv-table">
@@ -636,7 +636,7 @@
     <h3>Automated QC Check</h3>
     <div class="qc-block {{ 'qc-pass' if qc_check.passed else 'qc-fail' }}">
         <strong>{{ 'PASSED' if qc_check.passed else 'FLAGS FOUND' }}</strong> —
-        {{ qc_check.overall_assessment }}
+        {{ qc_check.overall_assessment | humanize_nums }}
     </div>
     {% if qc_check.flags %}
     <table class="fin-table">
@@ -644,9 +644,9 @@
         <tbody>
         {% for f in qc_check.flags %}
         <tr>
-            <td>{{ f.issue }}</td>
+            <td>{{ f.issue | humanize_nums }}</td>
             <td class="sev-{{ (f.severity or 'medium') | lower }}">{{ f.severity }}</td>
-            <td>{{ f.detail }}</td>
+            <td>{{ f.detail | humanize_nums }}</td>
         </tr>
         {% endfor %}
         </tbody>

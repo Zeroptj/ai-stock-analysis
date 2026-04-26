@@ -9,13 +9,40 @@ Perform a sanity check on the valuation results for {ticker}.
 ## Instructions
 Check for anomalies in the valuation:
 
-1. Is the implied fair value reasonable given the current market cap?
+1. Is the implied per-share fair value reasonable given the per-share current price?
+   (Use ONLY `display_summary.per_share.fair_value_vs_current_price` for this — it is
+   already pre-computed.)
 2. Are the growth assumptions realistic?
 3. Is the WACC in a reasonable range (typically 6-14%)?
 4. Is the terminal value an outsized portion of total value (>80% is a red flag)?
 5. Do the valuation multiples make sense for the sector?
 
 Flag any issues found.
+
+CRITICAL — UNIT DISCIPLINE (this is where you have failed before):
+
+The payload separates numbers into three buckets:
+  • `display_summary.per_share`     → per-SHARE values: fair_value_per_share,
+                                       current_price_per_share (e.g. $259.79, $424.62)
+  • `display_summary.company_level` → company-LEVEL totals: market_cap_company,
+                                       enterprise_value_company (e.g. $3.15T, $1.94T)
+  • `display_summary.rates`         → already-formatted percent strings (e.g. "+9.71%")
+
+ABSOLUTELY DO NOT:
+- Compare a per-share value with a company-level total. Writing "fair value $259.79
+  is below market cap $1.94T" is meaningless arithmetic — one is per-share, the other
+  is the entire company.
+- Call enterprise value "market cap" or vice versa. They are different concepts
+  (market cap = equity only; EV = equity + debt − cash). Quote `enterprise_value_company`
+  when you mean EV, `market_cap_company` when you mean market cap.
+- Re-format raw floats. Always quote the pre-formatted strings exactly. The raw
+  enterprise_value of 1,951,968,802,785.68 must appear as "$1.95T" — never "$195B".
+- Re-scale percent strings. "-37.52%" is the actual percentage, not a fraction.
+
+ONLY VALID HEADLINE COMPARISON for over/undervaluation:
+  per_share.fair_value_per_share  vs  per_share.current_price_per_share
+The result is already pre-computed in `display_summary.per_share.fair_value_vs_current_price`
+— quote that string verbatim in your `overall_assessment` and any related flag.
 
 Respond in this JSON format:
 {{
